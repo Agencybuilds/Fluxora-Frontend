@@ -1172,3 +1172,101 @@ No backend/API or wallet integration architecture was modified.
 - [ ] Copy clearly explains connection flow and private-key safety.
 - [ ] Layout remains readable and touch-friendly on mobile viewport widths.
 - [ ] Axe/WAVE scans reviewed and findings noted in PR description.
+
+
+---
+
+## Recipient Page Hierarchy (Issue #125)
+
+### Overview
+Improves the semantic structure, heading hierarchy, and accessibility of the Recipient Portal page (`src/pages/Recipient.tsx`) and its Streams list component (`src/components/recipient/RecipientStreams.tsx`).
+
+### Heading Hierarchy
+
+```
+<main> (aria-labelledby="recipient-page-title")
+  <header>
+    <h1 id="recipient-page-title">Recipient Portal</h1>          ← page title
+    <section aria-labelledby="overview-metrics-title">
+      <h2 id="overview-metrics-title" class="sr-only">           ← visually hidden
+        Overview metrics
+      </h2>
+      <dl> … metric cards … </dl>
+    </section>
+  </header>
+
+  <section aria-labelledby="balance-section-title">
+    <h2 id="balance-section-title" class="sr-only">              ← visually hidden
+      Withdrawable balance
+    </h2>
+    … balance figure + withdraw button …
+  </section>
+
+  <section aria-labelledby="streams-section-title">
+    <h2 id="streams-section-title" class="sr-only">              ← visually hidden
+      Incoming streams
+    </h2>
+    <RecipientStreams />
+      <h2 id="streams-list-heading">Your Incoming Streams</h2>   ← visible
+      <ul aria-labelledby="streams-list-heading">
+        <li> <article aria-label="Stream from …"> … </article> </li>
+      </ul>
+  </section>
+</main>
+```
+
+### Metric Cards (Overview Stats)
+
+- Replaced `<div>` pairs with `<dl>` / `<dt>` / `<dd>` for semantic key-value structure.
+- Each `<dd>` carries an `aria-label` with the full readable value (e.g. "2 active streams").
+
+### Accessible Status Badges (RecipientStreams)
+
+| Status    | Badge classes                                      | Dot animation |
+|-----------|----------------------------------------------------|---------------|
+| active    | `bg-emerald-500/10 border-emerald-500/30 text-emerald-400` | `animate-pulse` |
+| paused    | `bg-amber-500/10 border-amber-500/30 text-amber-400`       | static        |
+| completed | `bg-blue-500/10 border-blue-500/30 text-blue-400`          | static        |
+
+Each badge uses `role="status"` and `aria-label="Stream status: <value>"`.
+
+### Progress Bar
+
+- `role="progressbar"` with `aria-valuenow`, `aria-valuemin`, `aria-valuemax`, and `aria-label`.
+
+### Sort Control
+
+- `<select>` is now associated with a `<label htmlFor="streams-sort">` for screen-reader discoverability.
+- Sort state is lifted into component state (`sortKey`) so the sort is functional, not decorative.
+
+### Button Accessibility
+
+- Withdraw button: `aria-disabled` mirrors `disabled`; `aria-label` includes the exact USDC amount.
+- Pin button: `aria-pressed` reflects pinned state; `aria-label` names the sender.
+- Detail button: `aria-label` names the sender.
+- All interactive elements have `focus-visible` ring styles (`focus-visible:ring-2 focus-visible:ring-cyan-400`).
+
+### Decorative Elements
+
+- Background glow `<div>` elements carry `aria-hidden="true"`.
+- Inline SVG icons carry `aria-hidden="true"` and `focusable="false"`.
+- Avatar initials `<div>` carries `aria-hidden="true"`.
+
+### Validation Notes
+
+- Run `pnpm test` from the repository root.
+- Axe DevTools / WAVE scan on `/recipient` route with wallet connected and streams visible.
+- Verify heading outline with browser accessibility tree inspector.
+
+### Reviewer Checklist (Recipient Page)
+
+- [ ] `<main>` landmark is present and labelled.
+- [ ] Heading levels are sequential (h1 → h2 only; no skipped levels).
+- [ ] Metric `<dl>` reads correctly in screen reader (label then value).
+- [ ] Progress bars announce percentage via `aria-valuenow`.
+- [ ] Status badges announce status text via `aria-label`.
+- [ ] Sort `<select>` is labelled and functional.
+- [ ] Pin button `aria-pressed` toggles correctly.
+- [ ] Withdraw button is disabled/aria-disabled when balance is 0.
+- [ ] All focus rings are visible (2px cyan-400 ring).
+- [ ] Axe/WAVE scans reviewed and findings noted in PR description.
