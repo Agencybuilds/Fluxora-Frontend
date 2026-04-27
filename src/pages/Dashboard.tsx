@@ -5,6 +5,10 @@ import TreasuryOverviewLoading from '../components/TreasuryOverviewLoading';
 import TreasuryEmptyState from '../components/TreasuryEmptyState';
 import TreasuryOnboarding from '../components/TreasuryOnboarding';
 import ConnectWalletModal from '../components/ConnectWalletModal';
+import ToastNotification, {
+  type ToastVariant,
+} from "../components/ToastNotification";
+import "../design-tokens.css";
 
 const ONBOARDING_KEY = 'fluxora_onboarding_dismissed';
 
@@ -30,6 +34,10 @@ export default function Dashboard() {
   const [isWalletModalOpen, setIsWalletModalOpen] = useState(false);
   const [streams] = useState<Stream[]>([]);
   const [showOnboarding, setShowOnboarding] = useState(false);
+  const [toast, setToast] = useState<{
+    message: string;
+    variant: ToastVariant;
+  } | null>(null);
 
   // Resolve wallet connection state from Freighter (best-effort, no popup)
   const [walletConnected, setWalletConnected] = useState(false);
@@ -58,6 +66,13 @@ export default function Dashboard() {
     return () => clearTimeout(t);
   }, []);
 
+  useEffect(() => {
+    if (!toast) return undefined;
+
+    const timer = window.setTimeout(() => setToast(null), 4000);
+    return () => window.clearTimeout(timer);
+  }, [toast]);
+
   // Show onboarding on first-ever visit to an empty treasury
   useEffect(() => {
     if (!loading && streams.length === 0 && !hasSeenOnboarding()) {
@@ -76,9 +91,27 @@ export default function Dashboard() {
     setIsModalOpen(true);
   };
 
+  const handleStreamCreated = () => {
+    setIsModalOpen(false);
+    setToast({
+      message: "Stream created successfully. Review the new stream from the treasury overview.",
+      variant: "success",
+    });
+  };
+
+  const handleWalletProviderUnavailable = (providerName: string) => {
+    setIsWalletModalOpen(false);
+    setToast({
+      message: `${providerName} connection is not available in this demo yet. Try again once wallet integration is enabled.`,
+      variant: "error",
+    });
+  };
+
   if (loading) return <TreasuryOverviewLoading />;
 
   const hasStreams = streams.length > 0;
+  const primaryCtaClassName = "ui-primary-cta";
+  const compactPrimaryCtaClassName = "ui-primary-cta ui-primary-cta--compact";
 
   return (
     <div>
@@ -101,7 +134,7 @@ export default function Dashboard() {
           </div>
           <button
             type="button"
-            style={connectBannerBtnStyle}
+            className="button button--secondary"
             onClick={() => setIsWalletModalOpen(true)}
             aria-label="Connect Stellar wallet"
           >
@@ -130,7 +163,7 @@ export default function Dashboard() {
           <RecentStreams streams={streams} />
           <button
             type="button"
-            style={createBtnStyle}
+            className="button button--primary"
             onClick={() => setIsModalOpen(true)}
             aria-label="Create stream"
           >
@@ -152,12 +185,26 @@ export default function Dashboard() {
       <CreateStreamModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
+        onStreamCreated={handleStreamCreated}
       />
 
       <ConnectWalletModal
         isOpen={isWalletModalOpen}
         onClose={() => setIsWalletModalOpen(false)}
+        onConnectFreighter={() => handleWalletProviderUnavailable("Freighter")}
+        onConnectAlbedo={() => handleWalletProviderUnavailable("Albedo")}
+        onConnectWalletConnect={() =>
+          handleWalletProviderUnavailable("WalletConnect")
+        }
       />
+
+      {toast ? (
+        <ToastNotification
+          message={toast.message}
+          variant={toast.variant}
+          onClose={() => setToast(null)}
+        />
+      ) : null}
     </div>
   );
 }
@@ -176,32 +223,6 @@ const walletBannerStyle: React.CSSProperties = {
   marginBottom: '0.25rem',
 };
 
-const connectBannerBtnStyle: React.CSSProperties = {
-  background: 'var(--accent)',
-  color: '#000',
-  border: 'none',
-  borderRadius: '6px',
-  padding: '0.375rem 0.875rem',
-  fontSize: '0.8125rem',
-  fontWeight: 600,
-  cursor: 'pointer',
-  whiteSpace: 'nowrap',
-};
-
-const createBtnStyle: React.CSSProperties = {
-  display: "flex",
-  alignItems: "center",
-  gap: "0.5rem",
-  background: "var(--accent)",
-  color: "#ffffff",
-  border: "none",
-  padding: "0.625rem 1.25rem",
-  borderRadius: "8px",
-  fontWeight: 600,
-  fontSize: "1rem",
-  cursor: "pointer",
-  boxShadow: "0 4px 24px rgba(0, 212, 170, 0.4)",
-};
 
 const cardGrid: React.CSSProperties = {
   display: "grid",

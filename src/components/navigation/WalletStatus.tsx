@@ -21,6 +21,8 @@ export default function WalletStatus({
   const [open, setOpen] = useState(false);
   const [copied, setCopied] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+  const focusRingClassName =
+    "outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--navbar-bg)]";
 
   const networkUpper = network?.toUpperCase() ?? "";
   const isWrongNetwork = !SUPPORTED_NETWORKS.includes(networkUpper);
@@ -87,7 +89,10 @@ export default function WalletStatus({
       <div className="relative">
         <button
           onClick={() => setOpen((o) => !o)}
-          className="flex items-center gap-2 px-3 h-9 rounded-full bg-[var(--surface)] border border-[var(--border)] text-sm font-medium hover:border-[var(--accent)]/50 transition outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
+          aria-haspopup="menu"
+          aria-expanded={open}
+          aria-label={`Wallet ${truncate(address)}. Open wallet options.`}
+          className={`flex items-center gap-2 px-3 h-9 rounded-full bg-[var(--surface)] border border-[var(--border)] text-sm font-medium text-[var(--text)] cursor-pointer transition-colors hover:border-[var(--accent)]/50 ${focusRingClassName}`}
         >
           <span className="w-2 h-2 rounded-full bg-emerald-400" />
           <span className="font-mono text-xs">{truncate(address)}</span>
@@ -102,7 +107,7 @@ export default function WalletStatus({
           <div className="absolute right-0 mt-2 w-52 bg-[var(--navbar-bg)] border border-[var(--navbar-border)] rounded-xl shadow-md p-1.5 z-50">
             <button
               onClick={handleCopy}
-              className="flex items-center gap-2 w-full px-3 py-2 text-sm rounded-lg hover:bg-[var(--surface)]"
+              className={`flex items-center gap-2.5 w-full px-3 py-2 text-sm text-[var(--text)] rounded-lg hover:bg-[var(--surface)] transition-colors ${focusRingClassName}`}
             >
               {copied ? (
                 <Check size={16} className="text-emerald-400" />
@@ -113,11 +118,13 @@ export default function WalletStatus({
             </button>
 
             <button
-              onClick={() => {
-                window.open(explorerUrl, "_blank", "noopener");
-                setOpen(false);
+              role="menuitem"
+              onClick={() => { 
+                const netPath = network?.toLowerCase() === "public" ? "public" : "testnet";
+                window.open(`https://stellar.expert/explorer/${netPath}/account/${address}`, "_blank", "noopener"); 
+                setOpen(false); 
               }}
-              className="flex items-center gap-2 w-full px-3 py-2 text-sm rounded-lg hover:bg-[var(--surface)]"
+              className="flex items-center gap-2.5 w-full px-3 py-2 text-sm text-[var(--text)] rounded-lg hover:bg-[var(--surface)] transition-colors outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
             >
               <ExternalLink size={16} />
               View in explorer
@@ -126,11 +133,9 @@ export default function WalletStatus({
             <div className="my-1 h-px bg-[var(--navbar-border)]" />
 
             <button
-              onClick={() => {
-                setOpen(false);
-                onDisconnect?.();
-              }}
-              className="flex items-center gap-2 w-full px-3 py-2 text-sm text-red-400 rounded-lg hover:bg-[var(--surface)]"
+              role="menuitem"
+              onClick={() => { setOpen(false); onDisconnect?.(); }}
+              className={`flex items-center gap-2.5 w-full px-3 py-2 text-sm text-red-400 rounded-lg hover:bg-[var(--surface)] transition-colors ${focusRingClassName}`}
             >
               <LogOut size={16} />
               Disconnect
