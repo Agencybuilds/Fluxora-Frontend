@@ -7,6 +7,7 @@ import ToastNotification, {
   type ToastVariant,
 } from "../components/ToastNotification";
 import StreamsLoading from "../components/StreamsLoading";
+import Input from "../components/Input";
 import ZeroAccrualBanner from "../components/ZeroAccrualBanner";
 import { Pagination } from "../components/Pagination";
 import {
@@ -16,7 +17,17 @@ import {
   type StreamRecord,
   type StreamStatus,
 } from "../data/streamRecords";
+import {
+  formatDateWithTimezone,
+  getRelativeTime,
+  getCliffStatus,
+  getCliffStatusText,
+  formatDetailTime,
+  getUrgencyLevel,
+} from "../lib/timePresentation";
 import "./Streams.css";
+import TruncatedAddress from "../components/common/TruncatedAddress";
+
 
 type StatusFilter = "All" | StreamStatus;
 
@@ -34,11 +45,7 @@ function formatMonthlyRate(value: number) {
 
 function formatDate(value?: string) {
   if (!value) return "Not scheduled";
-  return new Intl.DateTimeFormat("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  }).format(new Date(value));
+  return formatDateWithTimezone(value);
 }
 
 function getStatusClassName(status: StreamStatus) {
@@ -94,6 +101,10 @@ function StreamCard({
   onToggle: () => void;
   onOpenDetail: () => void;
 }) {
+  const urgency = getUrgencyLevel(stream.cliffDate, stream.endDate);
+  const cliffStatus = getCliffStatusText(stream.cliffDate);
+  const endRelative = getRelativeTime(stream.endDate);
+
   return (
     <article className={`stream-card is-${getStatusClassName(stream.status)}`}>
       <div className="stream-card__header">
@@ -136,22 +147,53 @@ function StreamCard({
         <div className="stream-meta-block">
           <span>Recipient</span>
           <strong>{stream.recipientName}</strong>
-          <code>{stream.recipientAddress}</code>
+          <TruncatedAddress 
+            address={stream.recipientAddress} 
+            onCopy={() => {}} 
+          />
         </div>
         <div className="stream-meta-block">
           <span>Streaming rate</span>
           <strong>{formatMonthlyRate(stream.monthlyRate)}</strong>
           <div className="stream-card__meta-label">
-            Runs through {formatDate(stream.endDate)}
+            {stream.endDate ? `Ends ${endRelative}` : "No end date set"}
           </div>
         </div>
         <div className="stream-meta-block">
           <span>Withdrawable now</span>
           <strong>{formatUsdc(stream.withdrawableAmount)}</strong>
           <div className="stream-card__meta-label">
-            Next unlock {formatDate(stream.nextUnlockDate)}
+            {stream.nextUnlockDate
+              ? `Next unlock ${getRelativeTime(stream.nextUnlockDate)}`
+              : "No upcoming unlock"}
           </div>
         </div>
+      </div>
+
+      {/* Time display bar with cliff and end dates */}
+      <div className="stream-time-bar" aria-label="Stream timeline">
+        {stream.cliffDate && (
+          <div
+            className={`stream-time-bar__item stream-time-bar__cliff is-${cliffStatus}`}
+            aria-label={`Cliff date: ${formatDateWithTimezone(stream.cliffDate)} (${cliffStatus})`}
+          >
+            <span className="stream-time-bar__icon" aria-hidden="true">⏱</span>
+            <span className="stream-time-bar__label">Cliff</span>
+            <span className="stream-time-bar__date">{formatDateWithTimezone(stream.cliffDate)}</span>
+            <span className="stream-time-bar__relative">({getRelativeTime(stream.cliffDate)})</span>
+          </div>
+        )}
+        {stream.endDate && (
+          <div
+            className={`stream-time-bar__item stream-time-bar__end is-${urgency.end}`}
+            aria-label={`End date: ${formatDateWithTimezone(stream.endDate)} (${endRelative})`}
+          >
+            <span className="stream-time-bar__icon" aria-hidden="true">→</span>
+            <span className="stream-time-bar__label">End</span>
+            <span className="stream-time-bar__date">{formatDateWithTimezone(stream.endDate)}</span>
+            <span className="stream-time-bar__relative">({endRelative})</span>
+          </div>
+        )}
       </div>
 
       <div className="stream-progress">
@@ -195,15 +237,25 @@ function StreamCard({
                   <span className="stream-panel__row-label">Treasury</span>
                   <div className="stream-panel__row-value">
                     {stream.treasuryName}
-                    <div className="stream-panel__mono">
-                      {stream.treasuryAddress}
+                    <div className="mt-1">
+                      <TruncatedAddress address={stream.treasuryAddress} />
                     </div>
                   </div>
                 </div>
                 <div className="stream-panel__row">
                   <span className="stream-panel__row-label">Cliff date</span>
+                  <div className="stream-panel__row-value stream-time-value">
+                    <span className={`stream-cliff-badge is-${cliffStatus}`}>
+                      {cliffStatus === "passed" && "✓ "}
+                      {cliffStatus === "upcoming" && "⏱ "}
+                      {formatDetailTime(stream.cliffDate)}
+                    </span>
+                  </div>
+                </div>
+                <div className="stream-panel__row">
+                  <span className="stream-panel__row-label">End date</span>
                   <div className="stream-panel__row-value">
-                    {formatDate(stream.cliffDate)}
+                    {formatDetailTime(stream.endDate, { includeTimezone: true })}
                   </div>
                 </div>
                 <div className="stream-panel__row">
@@ -341,8 +393,11 @@ function StreamDetail({
                 <span className="stream-panel__row-label">Recipient</span>
                 <div className="stream-panel__row-value">
                   {stream.recipientName}
-                  <div className="stream-panel__mono">
-                    {stream.recipientAddress}
+                  <div className="mt-1">
+                    <TruncatedAddress 
+                      address={stream.recipientAddress} 
+                      onCopy={onCopyAddress}
+                    />
                   </div>
                 </div>
               </div>
@@ -350,8 +405,8 @@ function StreamDetail({
                 <span className="stream-panel__row-label">Treasury source</span>
                 <div className="stream-panel__row-value">
                   {stream.treasuryName}
-                  <div className="stream-panel__mono">
-                    {stream.treasuryAddress}
+                  <div className="mt-1">
+                    <TruncatedAddress address={stream.treasuryAddress} />
                   </div>
                 </div>
               </div>
@@ -492,6 +547,8 @@ export default function Streams() {
 
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("All");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [sortBy, setSortBy] = useState("recent");
   const [expandedStreamId, setExpandedStreamId] = useState<string>(
     streamRecords[0]?.id ?? "",
   );
@@ -539,17 +596,22 @@ export default function Streams() {
     .map((stream) => stream.nextUnlockDate)
     .filter(Boolean)
     .sort()[0];
-  const visibleStreams =
-    statusFilter === "All"
-      ? streamRecords
-      : streamRecords.filter((stream) => stream.status === statusFilter);
-
-  // Pagination logic
-  const paginatedStreams = visibleStreams.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage,
-  );
-
+  const visibleStreams = streamRecords
+    .filter((stream) => {
+      const matchesStatus =
+        statusFilter === "All" || stream.status === statusFilter;
+      const matchesSearch =
+        stream.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        stream.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        stream.recipientName.toLowerCase().includes(searchQuery.toLowerCase());
+      return matchesStatus && matchesSearch;
+    })
+    .sort((a, b) => {
+      if (sortBy === "name") return a.name.localeCompare(b.name);
+      if (sortBy === "rate") return b.monthlyRate - a.monthlyRate;
+      // Default to recent (higher ID first for demo)
+      return b.id.localeCompare(a.id);
+    });
   const selectedStream = streamId ? getStreamRecord(streamId) : undefined;
   const hasStreams = streamRecords.length > 0;
   const showEmptyState = !selectedStream && (!walletConnected || !hasStreams);
@@ -682,17 +744,19 @@ export default function Streams() {
 
           {/* Zero-accrual banner — streams live but nothing withdrawable yet */}
           {showZeroAccrual && (
-            <ZeroAccrualBanner
-              reason="cliff"
-              nextEventDate={nextUnlock}
-              onAction={() => {
-                const first = streamRecords.find(
-                  (s) => s.status === "Active",
-                );
-                if (first) navigate(`/app/streams/${first.id}`);
-              }}
-              actionLabel="Check cliff date"
-            />
+            <div style={{ marginBottom: "2rem" }}>
+              <ZeroAccrualBanner
+                reason="cliff"
+                nextEventDate={nextUnlock}
+                onAction={() => {
+                  const first = streamRecords.find(
+                    (s) => s.status === "Active",
+                  );
+                  if (first) navigate(`/app/streams/${first.id}`);
+                }}
+                actionLabel="Check cliff date"
+              />
+            </div>
           )}
 
           <section className="streams-summary-grid" aria-label="Stream summary">
@@ -727,37 +791,68 @@ export default function Streams() {
                   stream detail route for the complete layout.
                 </p>
               </div>
-              <div className="streams-filter-group" aria-label="Filter streams">
-                {STATUS_FILTERS.map((filter) => (
-                  <button
-                    type="button"
-                    key={filter}
-                    className={`streams-filter-button${
-                      statusFilter === filter ? " is-active" : ""
-                    }`}
-                    onClick={() => setStatusFilter(filter)}
-                    aria-pressed={statusFilter === filter}
-                  >
-                    {filter}
-                  </button>
-                ))}
+              <div className="flex flex-wrap items-center gap-3 w-full mt-4" aria-label="Filter and search streams">
+                <div className="flex-1 min-w-[200px]">
+                  <Input
+                    id="streams-search"
+                    aria-label="Search streams by name, ID or recipient"
+                    placeholder="Search streams..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                  />
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {STATUS_FILTERS.map((filter) => (
+                    <button
+                      type="button"
+                      key={filter}
+                      className={`streams-filter-button${
+                        statusFilter === filter ? " is-active" : ""
+                      }`}
+                      onClick={() => setStatusFilter(filter)}
+                      aria-pressed={statusFilter === filter}
+                    >
+                      {filter}
+                    </button>
+                  ))}
+                </div>
+                <div className="min-w-[160px]">
+                  <Input
+                    id="streams-sort"
+                    aria-label="Sort streams"
+                    type="select"
+                    value={sortBy}
+                    onChange={(e) => setSortBy(e.target.value)}
+                    options={[
+                      { value: "recent", label: "Most recent" },
+                      { value: "name", label: "Name (A-Z)" },
+                      { value: "rate", label: "Highest rate" },
+                    ]}
+                  />
+                </div>
               </div>
             </div>
 
             <div className="streams-list">
-              {paginatedStreams.map((stream) => (
-                <StreamCard
-                  key={stream.id}
-                  stream={stream}
-                  expanded={effectiveExpandedId === stream.id}
-                  onToggle={() =>
-                    setExpandedStreamId((current) =>
-                      current === stream.id ? "" : stream.id,
-                    )
-                  }
-                  onOpenDetail={() => navigate(`/app/streams/${stream.id}`)}
-                />
-              ))}
+              {visibleStreams.length > 0 ? (
+                visibleStreams.map((stream) => (
+                  <StreamCard
+                    key={stream.id}
+                    stream={stream}
+                    expanded={effectiveExpandedId === stream.id}
+                    onToggle={() =>
+                      setExpandedStreamId((current) =>
+                        current === stream.id ? "" : stream.id,
+                      )
+                    }
+                    onOpenDetail={() => navigate(`/app/streams/${stream.id}`)}
+                  />
+                ))
+              ) : (
+                <div className="streams-empty-search">
+                  <p>No streams match your search or filter.</p>
+                </div>
+              )}
             </div>
 
             <Pagination
@@ -777,6 +872,10 @@ export default function Streams() {
         </>
       )}
 
+      {toast && (
+        <ToastNotification message={toast.message} variant={toast.variant} />
+      )}
+
       <CreateStreamModal
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
@@ -792,14 +891,6 @@ export default function Streams() {
           setIsCreateModalOpen(true);
         }}
       />
-
-      {toast ? (
-        <ToastNotification
-          message={toast.message}
-          variant={toast.variant}
-          onClose={() => setToast(null)}
-        />
-      ) : null}
     </div>
   );
 }
