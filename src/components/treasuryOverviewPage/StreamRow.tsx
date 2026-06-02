@@ -1,7 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import StatusPill from "./StatusPill";
-import { Stream } from "./Stream";
-import "./StreamRow.css";
+import type { Stream } from "./Stream";
 
 interface Props {
   stream: Stream;
@@ -31,24 +30,46 @@ export default function StreamRow({ stream, isSelected = false, onSelect }: Prop
 
   return (
     <tr
-      className={`stream-row${isSelected ? " stream-row--selected" : ""}`}
-      role="row"
-      tabIndex={0}
-      aria-selected={isSelected}
-      onClick={handleActivate}
-      onKeyDown={handleKeyDown}
+      style={{
+        borderBottom: "1px solid var(--color-border-default)",
+        backgroundColor: "var(--color-surface-default)",
+        transition:
+          "background-color var(--motion-duration-stream-disclosure) var(--motion-ease-stream-disclosure)",
+      }}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.backgroundColor = "var(--color-surface-elevated)";
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.backgroundColor = "var(--color-surface-default)";
+      }}
     >
-      <td className="stream-row__cell py-4 px-3">
-        <div className="stream-row__name">{stream.name}</div>
-        <div className="stream-row__id">{stream.id}</div>
+      <td className="py-4 px-3">
+        <div
+          className="font-medium"
+          style={{ color: "var(--color-text-primary)" }}
+        >
+          {stream.name}
+        </div>
+        <div
+          className="text-xs"
+          style={{ color: "var(--color-text-muted)" }}
+        >
+          {stream.id}
+        </div>
       </td>
 
-      <td className="stream-row__cell py-4 px-3">
-        <span className="stream-row__text">{stream.recipient}</span>
+      <td
+        className="py-4 px-3"
+        style={{ color: "var(--color-text-primary)" }}
+      >
+        {stream.recipient}
       </td>
 
-      <td className="stream-row__cell py-4 px-3">
-        <span className="stream-row__text">{stream.rate}</span>
+      <td
+        className="py-4 px-3"
+        style={{ color: "var(--color-text-primary)" }}
+      >
+        {stream.rate}
       </td>
 
       <td className="stream-row__cell py-4 px-3">
@@ -58,15 +79,22 @@ export default function StreamRow({ stream, isSelected = false, onSelect }: Prop
       <td className="stream-row__cell py-4 px-3">
         <button
           type="button"
-          className="stream-row__action-btn"
-          tabIndex={-1}
-          aria-label={`View stream ${stream.name}`}
-          onClick={(e) => {
-            e.stopPropagation();
-            navigate(`/app/streams/${stream.id}`);
+          onClick={() => navigate(`/app/streams/${stream.id}`)}
+          aria-label={`View details for ${stream.name}`}
+          className="font-medium flex items-center gap-1"
+          style={{
+            color: "var(--color-accent-primary)",
+            transition:
+              "color var(--motion-duration-stream-disclosure) var(--motion-ease-stream-disclosure)",
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.color = "var(--color-accent-primary-dark)";
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.color = "var(--color-accent-primary)";
           }}
         >
-          View ↗
+          View -&gt;
         </button>
       </td>
     </tr>
