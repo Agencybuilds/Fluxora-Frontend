@@ -18,6 +18,12 @@ interface Props {
 
 interface Props {
   status: StreamStatus;
+  /** Icon size */
+  iconSize?: 'xs' | 'sm' | 'md' | 'lg';
+}
+
+interface Props {
+  status: StreamStatus;
 }
 
 const statusStyles: Record<ExtendedStatus, { background: string; color: string; Icon: any; label: string }> = {
