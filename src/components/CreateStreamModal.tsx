@@ -8,6 +8,11 @@ import { useWallet } from './wallet-connect/Walletcontext';
 import { useToast } from './toast/ToastProvider';
 import { createStream } from '../lib/stellar/tx';
 import { isValidStellarAddress, maskAddress } from '../lib/stellar';
+import {
+  formatLocalDateTime,
+  isBeforeLocalDateTime,
+  isDateTimeInPast,
+} from '../lib/createStreamDates';
 
 const USDC_DECIMAL_PLACES = 7;
 
@@ -194,8 +199,7 @@ export default function CreateStreamModal({
       if (!customStartDate) {
         return false;
       }
-      const selectedDate = new Date(customStartDate);
-      if (selectedDate < new Date()) {
+      if (isDateTimeInPast(customStartDate)) {
         return false;
       }
     }
@@ -204,12 +208,11 @@ export default function CreateStreamModal({
       if (!cliffDate) {
         return false;
       }
-      const selectedCliffDate = new Date(cliffDate);
-      if (selectedCliffDate < new Date(new Date().setHours(0, 0, 0, 0))) {
+      if (isDateTimeInPast(cliffDate)) {
         return false;
       }
       if (startTimeOption === 'custom' && customStartDate) {
-        if (selectedCliffDate < new Date(customStartDate)) {
+        if (isBeforeLocalDateTime(cliffDate, customStartDate)) {
           return false;
         }
       }
@@ -471,7 +474,7 @@ export default function CreateStreamModal({
           const customStartDateError = (startTimeOption === 'custom' && touched.customStartDate)
             ? (!customStartDate
                 ? 'Custom start date is required.'
-                : new Date(customStartDate) < new Date()
+                : isDateTimeInPast(customStartDate)
                 ? 'Start date must be in the future.'
                 : undefined)
             : undefined;
@@ -480,9 +483,9 @@ export default function CreateStreamModal({
           const cliffDateError = (cliffEnabled && touched.cliffDate)
             ? (!cliffDate
                 ? 'Cliff date is required.'
-                : new Date(cliffDate) < new Date(new Date().setHours(0, 0, 0, 0))
+                : isDateTimeInPast(cliffDate)
                 ? 'Cliff date must not be in the past.'
-                : (startTimeOption === 'custom' && customStartDate && new Date(cliffDate) < new Date(customStartDate))
+                : (startTimeOption === 'custom' && customStartDate && isBeforeLocalDateTime(cliffDate, customStartDate))
                 ? 'Cliff date must be on or after the start date.'
                 : undefined)
             : undefined;
@@ -495,6 +498,9 @@ export default function CreateStreamModal({
             <div className="section-header">
               <h3>Rate & schedule</h3>
               <p>Configure how fast USDC streams and when it starts.</p>
+              <p className="text-xs text-[var(--text-muted)]">
+                Start and cliff times use your local timezone.
+              </p>
             </div>
 
             {/* Stream Rate */}
@@ -700,7 +706,7 @@ export default function CreateStreamModal({
                     success={cliffDateSuccess}
                   >
                     <input
-                      type="date"
+                      type="datetime-local"
                       className="input-field"
                       value={cliffDate}
                       onChange={(e) => setCliffDate(e.target.value)}
@@ -963,7 +969,7 @@ export default function CreateStreamModal({
                             {startTimeOption === "now"
                               ? "Immediately"
                               : customStartDate
-                                ? new Date(customStartDate).toLocaleString()
+                                ? formatLocalDateTime(customStartDate)
                                 : "—"}
                           </span>
                         </div>
@@ -987,7 +993,7 @@ export default function CreateStreamModal({
                           <span className="review-card-row-label">Cliff</span>
                           <span className="review-card-row-value">
                             {cliffEnabled && cliffDate
-                              ? new Date(cliffDate).toLocaleDateString()
+                              ? formatLocalDateTime(cliffDate)
                               : "Not set"}
                           </span>
                         </div>
