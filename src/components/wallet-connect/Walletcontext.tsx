@@ -33,6 +33,8 @@ interface WalletState {
   network: string | null;
   connected: boolean;
   error: WalletError | null;
+  /** True while the provider is silently restoring a prior session. */
+  loading: boolean;
 }
 
 interface WalletContextType extends WalletState {
@@ -49,6 +51,15 @@ const INITIAL: WalletState = {
   network: null,
   connected: false,
   error: null,
+  loading: true,
+};
+
+const DISCONNECTED: WalletState = {
+  address: null,
+  network: null,
+  connected: false,
+  error: null,
+  loading: false,
 };
 
 type FreighterErrorLike = {
@@ -112,18 +123,25 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     state.connected && isStellarNetworkMismatch(state.network, expectedNetwork);
 
   const connect = (address: string, network: string) =>
-    setState({ address, network, connected: true, error: null });
+    setState({ address, network, connected: true, error: null, loading: false });
 
   const disconnect = () => {
     disconnectVersionRef.current += 1;
     clearWatcher();
-    setState(INITIAL);
+    setState(DISCONNECTED);
   };
 
   // Silently restore session if the user already approved this app.
   useEffect(() => {
     let cancelled = false;
     const restoreDisconnectVersion = disconnectVersionRef.current;
+
+    const finishRestore = () => {
+      if (cancelled || disconnectVersionRef.current !== restoreDisconnectVersion) {
+        return;
+      }
+      setState((prev) => (prev.loading ? { ...prev, loading: false } : prev));
+    };
 
     const restoreError = (error: unknown) => {
       if (cancelled || disconnectVersionRef.current !== restoreDisconnectVersion) {
@@ -135,6 +153,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
         network: null,
         connected: false,
         error: classifyWalletError(error),
+        loading: false,
       }));
     };
 
@@ -145,7 +164,10 @@ export function WalletProvider({ children }: { children: ReactNode }) {
           restoreError(conn.error);
           return;
         }
-        if (!conn.isConnected) return;
+        if (!conn.isConnected) {
+          finishRestore();
+          return;
+        }
 
         const addr = await getAddress(); // no popup — returns "" if not approved
         if (addr.error) {
@@ -175,6 +197,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
           network: net.network,
           connected: true,
           error: null,
+          loading: false,
         });
       } catch (error) {
         // Keep restore silent but expose a recoverable category to consumers.
@@ -198,7 +221,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       setState((prev) =>
         address === prev.address && network === prev.network
           ? prev
-          : { address, network, connected: true, error: null },
+          : { address, network, connected: true, error: null, loading: false },
       );
     });
 

@@ -7,6 +7,7 @@ import { ThemeProvider } from "./theme/ThemeProvider";
 import { WalletProvider } from "./components/wallet-connect/Walletcontext";
 import { ToastProvider } from "./components/toast/ToastProvider";
 import ErrorBoundary from "./components/ErrorBoundary";
+import RequireWallet from "./components/RequireWallet";
 import Home from "./pages/Home";
 import ConnectWallet from "./pages/ConnectWallet";
 import ErrorPage from "./pages/ErrorPage";
@@ -107,7 +108,14 @@ export default function App() {
                 <Route path="/streams" element={<Navigate to="/app/streams" replace />} />
                 <Route path="/streams/:streamId" element={<LegacyStreamRedirect />} />
                 <Route path="/landing" element={<Navigate to="/" replace />} />
-                <Route path="/app" element={<Layout />}>
+                <Route
+                  path="/app"
+                  element={
+                    <RequireWallet>
+                      <Layout />
+                    </RequireWallet>
+                  }
+                >
                   <Route index element={lazyAppRoute(<Dashboard />)} />
                   <Route path="streams" element={lazyAppRoute(<Streams />)} />
                   <Route path="streams/:streamId" element={lazyAppRoute(<Streams />)} />

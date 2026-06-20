@@ -27,7 +27,7 @@ const mockedGetNetwork = vi.mocked(getNetwork);
 const mockedWatchWalletChanges = vi.mocked(WatchWalletChanges);
 
 function WalletProbe() {
-  const { address, connected, error, network } = useWallet();
+  const { address, connected, error, network, loading } = useWallet();
 
   return (
     <output aria-label="wallet state">
@@ -36,6 +36,7 @@ function WalletProbe() {
         connected,
         error: error?.type ?? null,
         network,
+        loading,
       })}
     </output>
   );
@@ -89,6 +90,7 @@ describe("WalletProvider restore errors", () => {
         connected: true,
         error: null,
         network: "TESTNET",
+        loading: false,
       }),
     );
   });
@@ -157,6 +159,47 @@ describe("WalletProvider restore errors", () => {
       expect(walletState()).toMatchObject({
         connected: false,
         error: "unknown",
+      }),
+    );
+  });
+});
+
+describe("WalletProvider restore loading", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockedIsConnected.mockResolvedValue({ isConnected: false });
+    mockedGetAddress.mockResolvedValue({ address: "" });
+    mockedGetNetwork.mockResolvedValue({ network: "", networkPassphrase: "" });
+    mockedWatchWalletChanges.mockImplementation(
+      function MockWatchWalletChanges() {
+        return { watch: vi.fn(), stop: vi.fn() };
+      } as unknown as typeof WatchWalletChanges,
+    );
+  });
+
+  it("clears loading once silent restore resolves disconnected", async () => {
+    renderWalletProvider();
+
+    await waitFor(() =>
+      expect(walletState()).toMatchObject({ connected: false, loading: false }),
+    );
+  });
+
+  it("clears loading after restoring a verified address", async () => {
+    mockedIsConnected.mockResolvedValue({ isConnected: true });
+    mockedGetAddress.mockResolvedValue({ address: "GAPPROVEDADDRESS" });
+    mockedGetNetwork.mockResolvedValue({
+      network: "TESTNET",
+      networkPassphrase: "Test SDF Network ; September 2015",
+    });
+
+    renderWalletProvider();
+
+    await waitFor(() =>
+      expect(walletState()).toMatchObject({
+        address: "GAPPROVEDADDRESS",
+        connected: true,
+        loading: false,
       }),
     );
   });
