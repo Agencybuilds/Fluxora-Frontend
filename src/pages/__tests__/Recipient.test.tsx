@@ -3,6 +3,9 @@ import userEvent from "@testing-library/user-event";
 import { axe } from "vitest-axe";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+// Recipient gates the withdraw flow on a connected wallet on the matching
+// network. The global test setup stubs the wallet as disconnected, so provide a
+// connected stub here to exercise the loaded recipient portal.
 const mockWalletState = {
   address: "GATDOSCZNJ5YZHNOX7IOD4QDCQSTMR2YNF5IXHFNX3H6B4ICCMSDLOWN",
   network: "TESTNET",
@@ -15,7 +18,6 @@ const mockWalletState = {
   connect: vi.fn(),
   disconnect: vi.fn(),
 };
-
 vi.mock("../../components/wallet-connect/Walletcontext", () => ({
   useWallet: () => mockWalletState,
   WalletProvider: ({ children }: { children: React.ReactNode }) => children,
