@@ -245,7 +245,10 @@ describe("WalletProvider watcher start/stop semantics (unchanged by refactor)", 
       fireEvent.click(screen.getByRole("button", { name: "Connect" }));
     });
 
-    const instance = MockWatchWalletChanges.mock.instances[0];
+    const instance = MockWatchWalletChanges.mock.instances[0] as {
+      watch: ReturnType<typeof vi.fn>;
+      stop: ReturnType<typeof vi.fn>;
+    };
     expect(instance.watch).toHaveBeenCalledTimes(1);
     expect(instance.stop).not.toHaveBeenCalled();
 
@@ -279,7 +282,10 @@ describe("WalletProvider watcher start/stop semantics (unchanged by refactor)", 
       fireEvent.click(screen.getByRole("button", { name: "Connect" }));
     });
 
-    const instance = MockWatchWalletChanges.mock.instances[0];
+    const instance = MockWatchWalletChanges.mock.instances[0] as {
+      watch: ReturnType<typeof vi.fn>;
+      stop: ReturnType<typeof vi.fn>;
+    };
     expect(instance.stop).not.toHaveBeenCalled();
 
     unmount();
